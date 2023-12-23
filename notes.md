@@ -14,3 +14,17 @@ Token --> depositted --> AssetToken
 
 slither - > for this tutorial already present in makeFile
 aderyn
+
+# about
+
+write the protocol in my own words
+
+Diagrams here
+
+# potential attack vectors
+
+# ideas
+
+# questions
+
+q: Why are we using TSwap; What does that have to do with flash loans?
