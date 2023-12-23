@@ -266,6 +266,8 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         if (newFee > s_feePrecision) {
             revert ThunderLoan__BadNewFee();
         }
+        // @audit-low must emit an event!
+        // + emit FlashLoanFeeUpdated(newFee, s_flashLoanFee);
         s_flashLoanFee = newFee;
     }
 
