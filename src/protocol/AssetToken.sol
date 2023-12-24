@@ -108,6 +108,18 @@ contract AssetToken is ERC20 {
         s_exchangeRate = newExchangeRate;
         emit ExchangeRateUpdated(s_exchangeRate);
     }
+    // @audit A potential issue arises when there is a significant burning of AssetTokens (reduction in total supply).
+    // In such a scenario, the new exchange rate may be lower than the current exchange rate, triggering the revert
+    // condition: ```if (newExchangeRate <= s_exchangeRate)```. This could prevent the exchange rate from adjusting
+    // properly to reflect changes in the total supply.
+
+    // To address this vulnerability, you might want to reconsider the logic around how the exchange rate is updated.
+    // It's common for exchange rates in decentralized finance (DeFi) systems to be able to decrease under certain
+    // conditions, especially when there are substantial changes in the total supply or other factors.
+
+    // Consider whether the invariant of only allowing an increase in the exchange rate is a strict requirement for your
+    // protocol. If not, you might need to design a mechanism that allows for both increases and decreases in the
+    // exchange rate based on the underlying economic conditions.
 
     function getExchangeRate() external view returns (uint256) {
         return s_exchangeRate;
@@ -117,3 +129,41 @@ contract AssetToken is ERC20 {
         return i_underlying;
     }
 }
+
+// notes by bigBagBoogy:
+// User
+// If a malicious actor takes a huge flash loan and bloats the totalSupply and as such the newExchangeRate?
+
+// If a malicious actor takes a huge flash loan and artificially inflates the total supply of the AssetTokens, it could
+// indeed impact the newExchangeRate as calculated in the updateExchangeRate function. Let's break down the potential
+// scenario:
+
+// Flash Loan Attack:
+
+// A flash loan allows a user to borrow a large amount of assets without providing collateral as long as the borrowed
+// funds are returned within the same transaction.
+// Impact on updateExchangeRate:
+
+// The updateExchangeRate function calculates the new exchange rate based on the total supply and a fee. If a malicious
+// actor borrows a significant amount, leading to a massive increase in the total supply, the calculated newExchangeRate
+// may also increase substantially.
+// Potential Consequences:
+
+// The consequences depend on the specific economic model of the protocol and how it reacts to changes in the total
+// supply.
+// If the protocol is designed to handle flash loan-induced changes gracefully, it might not be a severe issue. However,
+// if the protocol assumes a relatively stable total supply, such extreme fluctuations could lead to unintended economic
+// consequences.
+// Risk of Manipulation:
+
+// Flash loan attacks are a known vector for manipulation in decentralized finance (DeFi) protocols. Malicious actors
+// may exploit price oracles, liquidity pools, and other mechanisms to their advantage.
+// Security Implications:
+
+// It's essential to assess whether such fluctuations in the total supply pose security risks or economic
+// vulnerabilities. For example, consider the impact on token holders, arbitrageurs, and other participants in the
+// system.
+// Mitigation:
+
+// Consider implementing mechanisms to mitigate the impact of flash loans, such as transactional constraints, fees, or
+// rate limits on changes in the total supply.

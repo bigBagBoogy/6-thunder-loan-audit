@@ -196,18 +196,20 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         // @follow-up: reentrancy vulnerability?
         assetToken.transferUnderlyingTo(msg.sender, amountUnderlying);
     }
+    // e no natspec!
 
     function flashloan(
-        address receiverAddress,
-        IERC20 token,
-        uint256 amount,
-        bytes calldata params
+        address receiverAddress, // e the address to get the flash loan
+        IERC20 token, // e the ERC20 to borrow
+        uint256 amount, // e the amount to borrow
+        bytes calldata params // e the parameter to call the receiver address with.
+            // the receiver address should be a contract
     )
         external
         revertIfZero(amount)
         revertIfNotAllowedToken(token)
     {
-        AssetToken assetToken = s_tokenToAssetToken[token];
+        AssetToken assetToken = s_tokenToAssetToken[token]; // e get the tokens
         uint256 startingBalance = IERC20(token).balanceOf(address(assetToken));
 
         if (amount > startingBalance) {
@@ -220,7 +222,7 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
 
         uint256 fee = getCalculatedFee(token, amount);
         // slither-disable-next-line reentrancy-vulnerabilities-2 reentrancy-vulnerabilities-3
-        // @follow-up:
+        // @follow-up: below is potentially also a jump in fee?
         assetToken.updateExchangeRate(fee);
 
         emit FlashLoan(receiverAddress, token, amount, fee, params);
@@ -295,10 +297,11 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         }
         // @audit-low must emit an event!
         // + emit FlashLoanFeeUpdated(newFee, s_flashLoanFee);
+        // since we SET a new fee here, is this a stepwise jump, with the risk of exploitation?
         s_flashLoanFee = newFee;
     }
-    // q is it ever unset poorly?
 
+    // q is it ever unset poorly?
     function isAllowedToken(IERC20 token) public view returns (bool) {
         return address(s_tokenToAssetToken[token]) != address(0);
     }

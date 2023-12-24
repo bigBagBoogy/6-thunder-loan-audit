@@ -1,6 +1,6 @@
 git init
 git add .
-git commit -m "scoping..."
+git commit -m "first finding"
 git push origin main
 
 # Thunder Loan
