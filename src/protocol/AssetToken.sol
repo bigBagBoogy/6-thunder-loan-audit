@@ -69,6 +69,8 @@ contract AssetToken is ERC20 {
         s_exchangeRate = STARTING_EXCHANGE_RATE;
     }
 
+    // e ok, only the thunderloan contract can mint and burn asset tokens
+    //
     function mint(address to, uint256 amount) external onlyThunderLoan {
         _mint(to, amount);
     }
@@ -78,6 +80,10 @@ contract AssetToken is ERC20 {
     }
 
     function transferUnderlyingTo(address to, uint256 amount) external onlyThunderLoan {
+        // e weird ERC20s??
+        // q what happens if USDC blacklists the thunderLoan contract?
+        // q what happens if USDC transfers to the thunderLoan contract?
+        // @follow-up
         i_underlying.safeTransfer(to, amount);
     }
 
@@ -86,10 +92,14 @@ contract AssetToken is ERC20 {
         // 2. How big the fee is should be divided by the total supply
         // 3. So if the fee is 1e18, and the total supply is 2e18, the exchange rate be multiplied by 1.5
         // if the fee is 0.5 ETH, and the total supply is 4, the exchange rate should be multiplied by 1.125
-        // it should always go up, never down
+        // it should always go up, never down @audit --> We've got an invariant here!!!
+        // q ok, but why?
         // newExchangeRate = oldExchangeRate * (totalSupply + fee) / totalSupply
         // newExchangeRate = 1 (4 + 0.5) / 4
         // newExchangeRate = 1.125
+
+        // q what if totalSupply = 0?
+        // this breaks the invariant is that an issue?
         uint256 newExchangeRate = s_exchangeRate * (totalSupply() + fee) / totalSupply();
 
         if (newExchangeRate <= s_exchangeRate) {
