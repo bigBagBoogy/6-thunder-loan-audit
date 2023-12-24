@@ -21,6 +21,8 @@ contract AssetToken is ERC20 {
     // The underlying per asset exchange rate
     // ie: s_exchangeRate = 2
     // means 1 asset token is worth 2 underlying tokens
+    // e underlying == USDC
+    // asset == shares
     uint256 private s_exchangeRate;
     uint256 public constant EXCHANGE_RATE_PRECISION = 1e18;
     uint256 private constant STARTING_EXCHANGE_RATE = 1e18;
@@ -52,7 +54,9 @@ contract AssetToken is ERC20 {
     //////////////////////////////////////////////////////////////*/
     constructor(
         address thunderLoan,
-        IERC20 underlying,
+        IERC20 underlying, // @audit the tokens being deposited for flash loans
+        // oh, are the ERC20s stored in AssetToken.sol in stead of thunderLoan.sol?
+        // q where are the ERC20s stored?
         string memory assetName,
         string memory assetSymbol
     )

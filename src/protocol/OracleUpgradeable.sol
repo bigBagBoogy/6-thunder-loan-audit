@@ -12,10 +12,20 @@ contract OracleUpgradeable is Initializable {
     function __Oracle_init(address poolFactoryAddress) internal onlyInitializing {
         __Oracle_init_unchained(poolFactoryAddress);
     }
+    // redundant
 
     function __Oracle_init_unchained(address poolFactoryAddress) internal onlyInitializing {
         s_poolFactory = poolFactoryAddress;
     }
+    //  OMG we are calling an external contract here!
+    // @audit-info: even though TSwapPool is out of scope for this audit, it is a potential attack vector!!!
+    // what if the price is manipulated?
+    // can I manipulate price?
+    // reentrancy??
+    // look at the tests. Are they using mocks. integration tests?
+    // actually they ARE testing mocks. of TSwapPool.
+    // Better they test the actual contract with forked tswappool'
+    //
 
     function getPriceInWeth(address token) public view returns (uint256) {
         address swapPoolOfToken = IPoolFactory(s_poolFactory).getPool(token);
