@@ -7,8 +7,8 @@ import { AssetToken } from "../../src/protocol/AssetToken.sol";
 import { MockFlashLoanReceiver } from "../mocks/MockFlashLoanReceiver.sol";
 
 contract ThunderLoanTest is BaseTest {
-    uint256 constant AMOUNT = 10e18;
-    uint256 constant DEPOSIT_AMOUNT = AMOUNT * 100;
+    uint256 constant AMOUNT_10e18 = 10e18;
+    uint256 constant DEPOSIT_AMOUNT = AMOUNT_10e18 * 100;
     address liquidityProvider = address(123);
     address user = address(456);
     MockFlashLoanReceiver mockFlashLoanReceiver;
@@ -42,10 +42,10 @@ contract ThunderLoanTest is BaseTest {
     }
 
     function testCantDepositUnapprovedTokens() public {
-        tokenA.mint(liquidityProvider, AMOUNT);
-        tokenA.approve(address(thunderLoan), AMOUNT);
+        tokenA.mint(liquidityProvider, AMOUNT_10e18);
+        tokenA.approve(address(thunderLoan), AMOUNT_10e18);
         vm.expectRevert(abi.encodeWithSelector(ThunderLoan.ThunderLoan__NotAllowedToken.selector, address(tokenA)));
-        thunderLoan.deposit(tokenA, AMOUNT);
+        thunderLoan.deposit(tokenA, AMOUNT_10e18);
     }
 
     modifier setAllowedToken() {
@@ -55,16 +55,16 @@ contract ThunderLoanTest is BaseTest {
     }
 
     function testDepositMintsAssetAndUpdatesBalance() public setAllowedToken {
-        tokenA.mint(liquidityProvider, AMOUNT);
+        tokenA.mint(liquidityProvider, AMOUNT_10e18);
 
         vm.startPrank(liquidityProvider);
-        tokenA.approve(address(thunderLoan), AMOUNT);
-        thunderLoan.deposit(tokenA, AMOUNT);
+        tokenA.approve(address(thunderLoan), AMOUNT_10e18);
+        thunderLoan.deposit(tokenA, AMOUNT_10e18);
         vm.stopPrank();
 
         AssetToken asset = thunderLoan.getAssetFromToken(tokenA);
-        assertEq(tokenA.balanceOf(address(asset)), AMOUNT);
-        assertEq(asset.balanceOf(liquidityProvider), AMOUNT);
+        assertEq(tokenA.balanceOf(address(asset)), AMOUNT_10e18);
+        assertEq(asset.balanceOf(liquidityProvider), AMOUNT_10e18);
     }
 
     modifier hasDeposits() {
@@ -77,14 +77,14 @@ contract ThunderLoanTest is BaseTest {
     }
 
     function testFlashLoan() public setAllowedToken hasDeposits {
-        uint256 amountToBorrow = AMOUNT * 10;
+        uint256 amountToBorrow = AMOUNT_10e18 * 10; // q why * 10?
         uint256 calculatedFee = thunderLoan.getCalculatedFee(tokenA, amountToBorrow);
         vm.startPrank(user);
-        tokenA.mint(address(mockFlashLoanReceiver), AMOUNT);
+        tokenA.mint(address(mockFlashLoanReceiver), AMOUNT_10e18);
         thunderLoan.flashloan(address(mockFlashLoanReceiver), tokenA, amountToBorrow, "");
         vm.stopPrank();
 
-        assertEq(mockFlashLoanReceiver.getBalanceDuring(), amountToBorrow + AMOUNT);
-        assertEq(mockFlashLoanReceiver.getBalanceAfter(), AMOUNT - calculatedFee);
+        assertEq(mockFlashLoanReceiver.getBalanceDuring(), amountToBorrow + AMOUNT_10e18);
+        assertEq(mockFlashLoanReceiver.getBalanceAfter(), AMOUNT_10e18 - calculatedFee);
     }
 }

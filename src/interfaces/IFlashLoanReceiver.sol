@@ -9,7 +9,7 @@ import { IThunderLoan } from "./IThunderLoan.sol";
  */
 interface IFlashLoanReceiver {
     function executeOperation(
-        address token,
+        address token, // the token that's being borrowed
         uint256 amount,
         uint256 fee,
         address initiator,
