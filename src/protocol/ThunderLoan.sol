@@ -140,10 +140,13 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
                            EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
     // @notice Initialize the contract. This is an extra step to make sure the contract is initialized after having been
-    // deployed.
+    // deployed. Needed/used for the upgradeability. (proxy)
     // @ audit  What would happen if we deploy the contract and then someone else initializes it? That would suck!
     // they could pick a different TSwap address!
     // @audit low - initializers could be front run.
+    // @audit low - could be called by anyone
+    // @audit low - can not be called multiple times (which is correct behaviour), so this is good at least.
+    // Change the deploy script to automatically call this function right after the contract is deployed
     function initialize(address tswapAddress) external initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
