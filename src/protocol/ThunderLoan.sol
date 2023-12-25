@@ -246,6 +246,8 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         );
 
         uint256 endingBalance = token.balanceOf(address(assetToken));
+        // e ending balance >= starting balance + fee
+        // token < token + fee (token)
         if (endingBalance < startingBalance + fee) {
             revert ThunderLoan__NotPaidBack(startingBalance + fee, endingBalance);
         }
@@ -282,9 +284,21 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
     }
     // @audit-info: why does this have no natspec?
     // q is this the calculation of fees of flash loans?
+    // q how is this calculating the fee?
+    // @param amount, the amount being borrowed
+    // @param token, the token being borrowed
 
     function getCalculatedFee(IERC20 token, uint256 amount) public view returns (uint256 fee) {
         //slither-disable-next-line divide-before-multiply
+        // so THIS is why we need TSWAP!
+        // q is this correct?
+
+        // say 1 USDC == 0.1 WETH
+        //  1 USDC + 0.003 WETH    fee
+        //  1 USDC + 0.003 USDC???
+        // @audit-high: prices are gonna be all wrong.
+        // if the fee is going to be in the token, then the value should reflect that.
+
         uint256 valueOfBorrowedToken = (amount * getPriceInWeth(address(token))) / s_feePrecision;
         //slither-disable-next-line divide-before-multiply
         fee = (valueOfBorrowedToken * s_flashLoanFee) / s_feePrecision;
