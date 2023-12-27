@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import { Test, console } from "forge-std/Test.sol";
+import { Test, console2 } from "forge-std/Test.sol";
 import { BaseTest, ThunderLoan } from "./BaseTest.t.sol";
 import { AssetToken } from "../../src/protocol/AssetToken.sol";
 import { MockFlashLoanReceiver } from "../mocks/MockFlashLoanReceiver.sol";
@@ -10,6 +10,7 @@ import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy
 import { BuffMockPoolFactory } from "../mocks/BuffMockPoolFactory.sol";
 import { BuffMockTSwap } from "../mocks/BuffMockTSwap.sol";
 import { IFlashLoanReceiver } from "../../src/interfaces/IFlashLoanReceiver.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ThunderLoanTest is BaseTest {
     uint256 constant AMOUNT_10e18 = 10e18;
@@ -93,7 +94,7 @@ contract ThunderLoanTest is BaseTest {
         assertEq(mockFlashLoanReceiver.getBalanceAfter(), AMOUNT_10e18 - calculatedFee);
     }
 
-    function oracleManipulation() public {
+    function testOracleManipulation() public {
         // 1. setup contracts
         thunderLoan = new ThunderLoan();
         tokenA = new ERC20Mock();
@@ -106,18 +107,38 @@ contract ThunderLoanTest is BaseTest {
         thunderLoan.initialize(address(pf));
 
         // 2. fund TSwap DEX
-        vm.strartPrank(liquidityProvider);
+        vm.startPrank(liquidityProvider);
         tokenA.mint(liquidityProvider, 100e18);
         tokenA.approve(address(tswapPool), 100e18);
         weth.mint(address(tswapPool), 100e18);
         weth.approve(address(tswapPool), 100e18);
         BuffMockTSwap(tswapPool).deposit(100e18, 100e18, 100e18, block.timestamp);
+        vm.stopPrank();
         // Ratio 100 weth & 100 tokenA
         // price 1:1
 
-        // 3. fund thunderLoan
+        // 3. fund thunderLoan (pool)
+        // set allowed token
+        vm.prank(thunderLoan.owner()); // create owner permission
+        thunderLoan.setAllowedToken(tokenA, true); // greenlight tokenA
+        // fund
+        vm.startPrank(liquidityProvider); // create investor
+        tokenA.mint(liquidityProvider, 1000e18); // create investor balance
+        tokenA.approve(address(thunderLoan), 1000e18); // approve for transfer
+        thunderLoan.deposit(tokenA, 1000e18); // deposit
+        vm.stopPrank();
+
+        // 100 weth & 100 tokenA in Tswap
+        // 1000 tokenA in ThunderLoan  (to be borrowed from)
+        // take out a flash loan of 50 tokenA
+        // swap it on the DEX tanking the price: 150 weth -> ~80 tokenA
+        // take out another flash loan of 50 tokenA (and we'll see how much cheaper it is)
+
         // 4. take out 2 flashloans
+
         // a. to nuke the price of the weth/Atoken on Tswap
         // b. to show that doing so greatly reduces the fees we pay on thunderloan
+        uint256 normalFeeCost = thunderLoan.getCalculatedFee(tokenA, 100e18);
+        console2.log("normal fee is: ", normalFeeCost, " weth");
     }
 }
