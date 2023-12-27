@@ -101,5 +101,23 @@ contract ThunderLoanTest is BaseTest {
         BuffMockPoolFactory pf = new BuffMockPoolFactory(address(weth));
         // create a TSwap DEX between WETH and tokenA
         address tswapPool = pf.createPool(address(tokenA));
+        // we use the proxy address as the thunderLoan contract address
+        thunderLoan = ThunderLoan(address(proxy));
+        thunderLoan.initialize(address(pf));
+
+        // 2. fund TSwap DEX
+        vm.strartPrank(liquidityProvider);
+        tokenA.mint(liquidityProvider, 100e18);
+        tokenA.approve(address(tswapPool), 100e18);
+        weth.mint(address(tswapPool), 100e18);
+        weth.approve(address(tswapPool), 100e18);
+        BuffMockTSwap(tswapPool).deposit(100e18, 100e18, 100e18, block.timestamp);
+        // Ratio 100 weth & 100 tokenA
+        // price 1:1
+
+        // 3. fund thunderLoan
+        // 4. take out 2 flashloans
+        // a. to nuke the price of the weth/Atoken on Tswap
+        // b. to show that doing so greatly reduces the fees we pay on thunderloan
     }
 }
