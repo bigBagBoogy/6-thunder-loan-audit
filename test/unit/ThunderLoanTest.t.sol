@@ -109,7 +109,7 @@ contract ThunderLoanTest is BaseTest {
         // 2. fund TSwap DEX
         vm.startPrank(liquidityProvider); // create an investor
         tokenA.mint(liquidityProvider, 100e18); // create investor balance
-        tokenA.approve(address(tswapPool), 100e18); // approve tokenA for transfer to Tswap
+        tokenA.approve(address(tswapPool), 100e18); // Approve the TSwap contract to spend tokens
         weth.mint(address(tswapPool), 100e18); // create weth balance
         weth.approve(address(tswapPool), 100e18);
         BuffMockTSwap(tswapPool).deposit(100e18, 100e18, 100e18, block.timestamp);
@@ -143,9 +143,43 @@ contract ThunderLoanTest is BaseTest {
         // b. to show that doing so greatly reduces the fees we pay on thunderloan
         uint256 normalFeeCost = thunderLoan.getCalculatedFee(tokenA, 100e18);
         console.log("normal fee is: ", normalFeeCost, " weth");
+        // should give: 0.296147410319118389 weth
+
+        uint256 amountToBorrow = 50e18;
     }
 
     function testConsoleLog() public view {
         console.log("hello world");
     }
+}
+
+contract MalicousFlashLoanReceiver is IFlashLoanReceiver {
+    ThunderLoan thunderLoan;
+    address repayAddress;
+    BuffMockTSwap tswapPool;
+    bool attacked = false;
+
+    constructor(address _tswapPool, address _thunderLoan, address _repayAddress, BuffMockTSwap _tswapPool) {
+        tswapPool = BuffMockTSwap(_tswapPool);
+        thunderLoan = ThunderLoan(_thunderLoan);
+        repayAddress = _repayAddress;
+    }
+
+    function executeOperation(
+        address token, // the token that's being borrowed
+        uint256 amount,
+        uint256 fee,
+        address initiator,
+        bytes calldata params
+    )
+        external
+        returns (bool); {
+            if(!attacked) {
+        // 1. swap tokenA borrowed for weth
+       // 2. take out ANOTHER flash loan, to show the difference in fees
+
+    } else {
+     
+    }
+}
 }
