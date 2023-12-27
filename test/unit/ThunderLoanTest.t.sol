@@ -87,4 +87,8 @@ contract ThunderLoanTest is BaseTest {
         assertEq(mockFlashLoanReceiver.getBalanceDuring(), amountToBorrow + AMOUNT_10e18);
         assertEq(mockFlashLoanReceiver.getBalanceAfter(), AMOUNT_10e18 - calculatedFee);
     }
+
+    function oracleManipulation() public {
+        // 1. setup contracts
+    }
 }

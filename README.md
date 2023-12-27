@@ -1,6 +1,6 @@
 git init
 git add .
-git commit -m "first finding"
+git commit -m "oracle manipulation"
 git push origin main
 
 # Thunder Loan

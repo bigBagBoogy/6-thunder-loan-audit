@@ -84,6 +84,8 @@ contract AssetToken is ERC20 {
         // q what happens if USDC blacklists the thunderLoan contract?
         // q what happens if USDC transfers to the thunderLoan contract?
         // @follow-up
+        // if a user is denylisted, too bad.
+        // if a user is denylisted, and this affects other users, this is bad.
         i_underlying.safeTransfer(to, amount);
     }
 
