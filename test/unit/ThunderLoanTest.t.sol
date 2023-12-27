@@ -5,6 +5,7 @@ import { Test, console } from "forge-std/Test.sol";
 import { BaseTest, ThunderLoan } from "./BaseTest.t.sol";
 import { AssetToken } from "../../src/protocol/AssetToken.sol";
 import { MockFlashLoanReceiver } from "../mocks/MockFlashLoanReceiver.sol";
+import { ERC20Mock } from "../mocks/ERC20Mock.sol";
 
 contract ThunderLoanTest is BaseTest {
     uint256 constant AMOUNT_10e18 = 10e18;
@@ -90,5 +91,8 @@ contract ThunderLoanTest is BaseTest {
 
     function oracleManipulation() public {
         // 1. setup contracts
+        thunderLoan = new ThunderLoan();
+        tokenA = new ERC20Mock();
+        proxy
     }
 }
