@@ -6,6 +6,10 @@ import { BaseTest, ThunderLoan } from "./BaseTest.t.sol";
 import { AssetToken } from "../../src/protocol/AssetToken.sol";
 import { MockFlashLoanReceiver } from "../mocks/MockFlashLoanReceiver.sol";
 import { ERC20Mock } from "../mocks/ERC20Mock.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { BuffMockPoolFactory } from "../mocks/BuffMockPoolFactory.sol";
+import { BuffMockTSwap } from "../mocks/BuffMockTSwap.sol";
+import { IFlashLoanReceiver } from "../../src/interfaces/IFlashLoanReceiver.sol";
 
 contract ThunderLoanTest is BaseTest {
     uint256 constant AMOUNT_10e18 = 10e18;
@@ -93,6 +97,9 @@ contract ThunderLoanTest is BaseTest {
         // 1. setup contracts
         thunderLoan = new ThunderLoan();
         tokenA = new ERC20Mock();
-        proxy
+        proxy = new ERC1967Proxy(address(thunderLoan), "");
+        BuffMockPoolFactory pf = new BuffMockPoolFactory(address(weth));
+        // create a TSwap DEX between WETH and tokenA
+        address tswapPool = pf.createPool(address(tokenA));
     }
 }
