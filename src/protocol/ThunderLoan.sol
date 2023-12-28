@@ -157,7 +157,7 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         s_feePrecision = 1e18; // @writter in aderyn (magic numbers)
         s_flashLoanFee = 3e15; // 0.3% ETH fee
     }
-    // @audit low where is the natspec? This is a super importan function.
+    // @audit low where is the natspec? This is a super important function.
 
     function deposit(IERC20 token, uint256 amount) external revertIfZero(amount) revertIfNotAllowedToken(token) {
         AssetToken assetToken = s_tokenToAssetToken[token]; // e represents the shares of the pool
